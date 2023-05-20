@@ -200,5 +200,5 @@ app.put('/update/:id', upload.single('profilePicture'), async (req, res) => {
 });
 
 server.listen(process.env.PORT || 3000, () => {
- console.log(`Servidor escuchando en el puerto ${procces.env.PORT}`);
+ console.log(`Servidor escuchando en el puerto ${proccess.env.PORT}`);
 });
