@@ -6,6 +6,9 @@ const app = express();
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 
+
+
+
 const { Storage } = require('@google-cloud/storage');
 let projectId = 'insidethenetworl';
 let keyFilename = "mykey.json";
@@ -18,7 +21,7 @@ const bucket = storage.bucket('tinderclonestorage');
 app.use(cors({ origin: '*' }));
 
 // const server = require('http').createServer(app);
-const io = require('socket.io')(8080,{
+const io = require('socket.io')(process.env.SOCKET_PORT || 8080,{
  cors:{
  origin: "*"
  }
@@ -196,6 +199,6 @@ app.put('/update/:id', upload.single('profilePicture'), async (req, res) => {
     }
 });
 
-app.listen(8000, () => {
+app.listen(process.env.PORT || 8000, () => {
  console.log('Servidor escuchando en el puerto 8000');
 });
