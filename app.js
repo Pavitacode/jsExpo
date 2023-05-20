@@ -6,6 +6,7 @@ const app = express();
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 
+const server = require('http').createServer(app);
 
 
 
@@ -20,8 +21,7 @@ const bucket = storage.bucket('tinderclonestorage');
 
 app.use(cors({ origin: '*' }));
 
-// const server = require('http').createServer(app);
-const io = require('socket.io')(process.env.SOCKET_PORT || 8080,{
+const io = require('socket.io')(server,{
  cors:{
  origin: "*"
  }
@@ -181,7 +181,7 @@ app.put('/update/:id', upload.single('profilePicture'), async (req, res) => {
         delete updateData.lastPassword;
         delete updateData.newPassword;
 
-       console.log(updateData.profilePicture)
+      
         let updatedUser=await User.findByIdAndUpdate(req.params.id,updateData,{new:true});
         let data={
             id : updatedUser._id,
@@ -199,6 +199,6 @@ app.put('/update/:id', upload.single('profilePicture'), async (req, res) => {
     }
 });
 
-app.listen(process.env.PORT || 8000, () => {
- console.log('Servidor escuchando en el puerto 8000');
+server.listen(process.env.PORT || 3000, () => {
+ console.log('Servidor escuchando en el puerto {procces.env.PORT}');
 });
