@@ -60,13 +60,13 @@ io.on('connection', (socket) => {
     let last_likes_ids = [];
     const intervalFunction = async () => {
       const user = await User.findById(id);
-      const likes = user.likes;
+      const likesYou = user.likesYou;
       if (likes.length != last_likes_ids.length) {
         console.log("hola2")
-        const new_likes = likes.filter((like) => !last_likes_ids.includes(like));
+        const new_likes = likesYou.filter((like) => !last_likes_ids.includes(like));
         const liked_users = await User.find({ _id: { $in: new_likes } });
         socket.emit('likeUsers', liked_users);
-        last_likes_ids = likes;
+        last_likes_ids = likesYou;
       }
     };
     setInterval(intervalFunction, 1000);
