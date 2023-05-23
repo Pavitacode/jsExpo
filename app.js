@@ -61,7 +61,7 @@ io.on('connection', (socket) => {
     const intervalFunction = async () => {
       const user = await User.findById(id);
       const likesYou = user.likesYou;
-      if (likes.length != last_likes_ids.length) {
+      if (likesYou.length != last_likes_ids.length) {
         console.log("hola2")
         const new_likes = likesYou.filter((like) => !last_likes_ids.includes(like));
         const liked_users = await User.find({ _id: { $in: new_likes } });
