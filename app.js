@@ -52,16 +52,13 @@ const userSchema = new mongoose.Schema({
 io.on('connection', (socket) => {
 
 
-
-
- socket.on('message', async (request) => {
- const id = request.id;
-
-if (request.isLikesYou) {
+    
+ socket.on('likeUsers', async (request) => {
+    const  id  = request.id;
     console.log(id)
     console.log("hola1")
     let last_likes_ids = [];
-    const intervalFunction2 = async () => {
+    const intervalFunction = async () => {
       const user = await User.findById(id);
       const likesYou = user.likesYou;
       if (likes.length != last_likes_ids.length) {
@@ -72,48 +69,47 @@ if (request.isLikesYou) {
         last_likes_ids = likesYou;
       }
     };
-    setInterval(intervalFunction2, 1000);
-}
-
-else {
-
-    const gender = request.gender;
-    const user = await User.findById(id);
-    const likes = user.likes
-    const dislikes = user.dislikes
-    const sexuality = request.sexuality;
-    console.log(gender + sexuality);
-    let last_post_ids = [];
-    let query = {
-       _id: { $ne: id, $nin: [...likes, ...dislikes] },
-     };
-    if (sexuality === 'Heterosexual') {
-    query.sex = gender === 'Masculino' ? 'Femenino' : 'Masculino';
-    query.gustos = 'Heterosexual';
-    } else if (sexuality === 'Bisexual') {
-    query.gustos = 'Bisexual';
-    } else if (sexuality === 'Gay') {
-    query.sex = gender;
-    query.gustos = 'Gay';
-    }
-    
-    console.log(query);
-    const intervalFunction = async () => {
-    const posts = await User.find(query);
-    const post_ids = posts.map((post) => post['_id'].toString());
-    if (post_ids.length != last_post_ids.length) {
-    const filtered_posts = posts.filter(
-    (post) => !last_post_ids.includes(post['_id'].toString())
-    );
-    socket.emit('message', filtered_posts);
-    last_post_ids = post_ids;
-    }
-    }; 
     setInterval(intervalFunction, 1000);
+  });
 
-}
-});
 
+ socket.on('message', async (request) => {
+ const id = request.id;
+ const gender = request.gender;
+ const user = await User.findById(id);
+ const likes = user.likes
+ const dislikes = user.dislikes
+ const sexuality = request.sexuality;
+ console.log(gender + sexuality);
+ let last_post_ids = [];
+ let query = {
+    _id: { $ne: id, $nin: [...likes, ...dislikes] },
+  };
+ if (sexuality === 'Heterosexual') {
+ query.sex = gender === 'Masculino' ? 'Femenino' : 'Masculino';
+ query.gustos = 'Heterosexual';
+ } else if (sexuality === 'Bisexual') {
+ query.gustos = 'Bisexual';
+ } else if (sexuality === 'Gay') {
+ query.sex = gender;
+ query.gustos = 'Gay';
+ }
+ 
+ console.log(query);
+ const intervalFunction = async () => {
+ const posts = await User.find(query);
+ const post_ids = posts.map((post) => post['_id'].toString());
+ if (post_ids.length != last_post_ids.length) {
+ const filtered_posts = posts.filter(
+ (post) => !last_post_ids.includes(post['_id'].toString())
+ );
+ socket.emit('message', filtered_posts);
+ last_post_ids = post_ids;
+ }
+ };
+ 
+ setInterval(intervalFunction, 1000);
+ });
  });
  
 
