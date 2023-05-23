@@ -41,22 +41,50 @@ const userSchema = new mongoose.Schema({
  gustos: String,
  likesYou: [],
  likes: [],
+ dislikes: [],
  sex: String,
  profilePicture: String,
  }, { versionKey: false });
  
  const User = mongoose.model('User', userSchema, 'Users');
 
+
 io.on('connection', (socket) => {
- socket.on('message', (request) => {
+
+
+    
+ socket.on('likeUsers', async (request) => {
+    const  id  = request.id;
+    console.log(id)
+    console.log("hola1")
+    let last_likes_ids = [];
+    const intervalFunction = async () => {
+      const user = await User.findById(id);
+      const likes = user.likes;
+      if (likes.length != last_likes_ids.length) {
+        console.log("hola2")
+        const new_likes = likes.filter((like) => !last_likes_ids.includes(like));
+        const liked_users = await User.find({ _id: { $in: new_likes } });
+        socket.emit('likeUsers', liked_users);
+        last_likes_ids = likes;
+      }
+    };
+    setInterval(intervalFunction, 1000);
+  });
+
+
+ socket.on('message', async (request) => {
  const id = request.id;
  const gender = request.gender;
+ const user = await User.findById(id);
+ const likes = user.likes
+ const dislikes = user.dislikes
  const sexuality = request.sexuality;
  console.log(gender + sexuality);
  let last_post_ids = [];
  let query = {
- _id: { $ne: id },
- };
+    _id: { $ne: id, $nin: [...likes, ...dislikes] },
+  };
  if (sexuality === 'Heterosexual') {
  query.sex = gender === 'Masculino' ? 'Femenino' : 'Masculino';
  query.gustos = 'Heterosexual';
@@ -198,6 +226,19 @@ app.put('/update/:id', upload.single('profilePicture'), async (req, res) => {
         res.status(500).json({message:'Error al actualizar el usuario'});
     }
 });
+
+app.put('/addLikeOrDislike/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { otherUserId, isLike } = req.body;
+      const update = isLike ? { $push: { likes: otherUserId } } : { $push: { dislikes: otherUserId } };
+      await User.findByIdAndUpdate(id, update);
+      res.json({ message: 'Actualización exitosa' });
+    } catch (err) {
+      res.status(500).json({ message: 'Error al actualizar el usuario' });
+    }
+  });
+  
 
 server.listen(process.env.PORT || 3000, () => {
  console.log(`Servidor escuchando en el puerto ${process.env.PORT}`);
