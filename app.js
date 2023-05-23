@@ -229,15 +229,19 @@ app.put('/update/:id', upload.single('profilePicture'), async (req, res) => {
 
 app.put('/addLikeOrDislike/:id', async (req, res) => {
     try {
-      const { id } = req.params;
-      const { otherUserId, isLike } = req.body;
-      const update = isLike ? { $push: { likes: otherUserId } } : { $push: { dislikes: otherUserId } };
-      await User.findByIdAndUpdate(id, update);
-      res.json({ message: 'Actualización exitosa' });
-    } catch (err) {
-      res.status(500).json({ message: 'Error al actualizar el usuario' });
+    const { id } = req.params;
+    const { otherUserId, isLike } = req.body;
+    const update = isLike ? { $push: { likes: otherUserId } } : { $push: { dislikes: otherUserId } };
+    const updateLikes = await User.findByIdAndUpdate(id, update);
+    if (isLike) {
+    await User.findByIdAndUpdate(otherUserId, { $push: { likesYou: id } });
     }
-  });
+    res.json({ message: 'Actualización exitosa', isActualize: updateLikes});
+    } catch (err) {
+    res.status(500).json({ message: 'Error al actualizar el usuario' });
+    }
+   });
+   
   
 
 server.listen(process.env.PORT || 3000, () => {
