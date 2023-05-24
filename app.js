@@ -94,7 +94,7 @@ io.on('connection', (socket) => {
       if (likesYou.length != last_likes_ids.length) {
         console.log("hola2")
         const new_likes = likesYou.filter((like) => !last_likes_ids.includes(like));
-        const liked_users = await User.find({ _id: { $in: new_likes } , $nin: [...matches]});
+        const liked_users = await User.find({ _id: { $in: new_likes, $nin: [...matches] } });
         socket.emit('likeUsers', liked_users);
         last_likes_ids = likesYou;
       }
@@ -283,7 +283,8 @@ app.put('/addLikeOrDislike/:id', async (req, res) => {
     const { id } = req.params;
     const user = await User.findById(id);
     const likes = user.likes;
-    const likedUsers = await User.find({ _id: { $in: likes } , $nin: [...matches] });
+    const matches = user.matches;
+    const likedUsers = await User.find({ _id: { $in: likes, $nin: [...matches] }  });
     res.json({ message: 'Consulta exitosa', likedUsers: likedUsers });
     } catch (err) {
     res.status(500).json({ message: 'Error al consultar los usuarios' });
