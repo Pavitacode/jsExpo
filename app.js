@@ -42,6 +42,7 @@ const userSchema = new mongoose.Schema({
  likesYou: [],
  likes: [],
  dislikes: [],
+ matches: [],
  sex: String,
  profilePicture: String,
  }, { versionKey: false });
@@ -50,6 +51,34 @@ const userSchema = new mongoose.Schema({
 
 
 io.on('connection', (socket) => {
+
+    
+    socket.on('matches', async (request) => {
+        const id = request.id;
+        console.log(id)
+        console.log("hola1")
+        let last_matches_ids = [];
+        const intervalFunction = async () => {
+        const user = await User.findById(id);
+        const likes = user.likes;
+        const matches = [];
+        for (const like of likes) {
+        const likedUser = await User.findById(like);
+        if (likedUser.likes.includes(id)) {
+        matches.push(like);
+        }
+        }
+        if (matches.length != last_matches_ids.length) {
+        console.log("hola2")
+        const new_matches = matches.filter((match) => !last_matches_ids.includes(match));
+        const matched_users = await User.find({ _id: { $in: new_matches } });
+        socket.emit('matches', matched_users);
+        last_matches_ids = matches;
+        }
+        };
+        setInterval(intervalFunction, 1000);
+       });
+       
 
 
     
@@ -61,10 +90,11 @@ io.on('connection', (socket) => {
     const intervalFunction = async () => {
       const user = await User.findById(id);
       const likesYou = user.likesYou;
+      const matches = user.matches;
       if (likesYou.length != last_likes_ids.length) {
         console.log("hola2")
         const new_likes = likesYou.filter((like) => !last_likes_ids.includes(like));
-        const liked_users = await User.find({ _id: { $in: new_likes } });
+        const liked_users = await User.find({ _id: { $in: new_likes } , $nin: [...matches]});
         socket.emit('likeUsers', liked_users);
         last_likes_ids = likesYou;
       }
@@ -231,18 +261,35 @@ app.put('/addLikeOrDislike/:id', async (req, res) => {
     try {
     const { id } = req.params;
     const { otherUserId, isLike } = req.body;
+    let isMatch = false;
     const update = isLike ? { $push: { likes: otherUserId } } : { $push: { dislikes: otherUserId } };
     const updateLikes = await User.findByIdAndUpdate(id, update);
     if (isLike) {
     await User.findByIdAndUpdate(otherUserId, { $push: { likesYou: id } });
+    const otherUser = await User.findById(otherUserId);
+    if (otherUser.likes.includes(id)) {
+    isMatch = true;
     }
-    res.json({ message: 'Actualización exitosa', isActualize: updateLikes});
+    }
+    res.json({ message: 'Actualización exitosa', isActualize: updateLikes, isMatch: isMatch});
     } catch (err) {
     res.status(500).json({ message: 'Error al actualizar el usuario' });
     }
    });
    
   
+   app.get('/getMyLikes/:id', async (req, res) => {
+    try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    const likes = user.likes;
+    const likedUsers = await User.find({ _id: { $in: likes } , $nin: [...matches] });
+    res.json({ message: 'Consulta exitosa', likedUsers: likedUsers });
+    } catch (err) {
+    res.status(500).json({ message: 'Error al consultar los usuarios' });
+    }
+   });
+   
 
 server.listen(process.env.PORT || 3000, () => {
  console.log(`Servidor escuchando en el puerto ${process.env.PORT}`);
