@@ -60,14 +60,7 @@ io.on('connection', (socket) => {
         let last_matches_ids = [];
         const intervalFunction = async () => {
         const user = await User.findById(id);
-        const likes = user.likes;
-        const matches = [];
-        for (const like of likes) {
-        const likedUser = await User.findById(like);
-        if (likedUser.likes.includes(id)) {
-        matches.push(like);
-        }
-        }
+        const matches = user.matches
         if (matches.length != last_matches_ids.length) {
         console.log("hola2")
         const new_matches = matches.filter((match) => !last_matches_ids.includes(match));
@@ -259,23 +252,33 @@ app.put('/update/:id', upload.single('profilePicture'), async (req, res) => {
 
 app.put('/addLikeOrDislike/:id', async (req, res) => {
     try {
-    const { id } = req.params;
-    const { otherUserId, isLike } = req.body;
-    let isMatch = false;
-    const update = isLike ? { $push: { likes: otherUserId } } : { $push: { dislikes: otherUserId } };
-    const updateLikes = await User.findByIdAndUpdate(id, update);
-    if (isLike) {
-    await User.findByIdAndUpdate(otherUserId, { $push: { likesYou: id } });
-    const otherUser = await User.findById(otherUserId);
-    if (otherUser.likes.includes(id)) {
-    isMatch = true;
-    }
-    }
-    res.json({ message: 'Actualización exitosa', isActualize: updateLikes, isMatch: isMatch});
+      const { id } = req.params;
+      const { otherUserId, isLike } = req.body;
+      let isMatch = false;
+      const update = isLike
+        ? { $push: { likes: otherUserId } }
+        : { $push: { dislikes: otherUserId } };
+      const updateLikes = await User.findByIdAndUpdate(id, update);
+      if (isLike) {
+        await User.findByIdAndUpdate(otherUserId, { $push: { likesYou: id } });
+        const otherUser = await User.findById(otherUserId);
+        if (otherUser.likes.includes(id)) {
+          isMatch = true;
+          // Agregar el ID del usuario a la lista de matches de ambos usuarios
+          await User.findByIdAndUpdate(id, { $push: { matches: otherUserId } });
+          await User.findByIdAndUpdate(otherUserId, { $push: { matches: id } });
+        }
+      }
+      res.json({
+        message: 'Actualización exitosa',
+        isActualize: updateLikes,
+        isMatch: isMatch
+      });
     } catch (err) {
-    res.status(500).json({ message: 'Error al actualizar el usuario' });
+      res.status(500).json({ message: 'Error al actualizar el usuario' });
     }
-   });
+  });
+  
    
   
    app.get('/getMyLikes/:id', async (req, res) => {
