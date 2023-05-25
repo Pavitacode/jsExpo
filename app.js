@@ -82,7 +82,7 @@ io.on('connection', (socket) => {
         const intervalFunction = async () => {
           const user = await User.findById(id);
           const likesYou = user.likesYou.map((like) => like.userId);
-          if (likesYou.length != last_likes_ids.length  && matches.length != 0) {
+          if (likesYou.length != last_likes_ids.length  && likesYou.length != 0) {
             const new_likes = user.likesYou.filter(
               (like) => !last_likes_ids.includes(like.userId)
             );
