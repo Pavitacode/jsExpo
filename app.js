@@ -58,6 +58,7 @@ io.on('connection', (socket) => {
         let last_matches_ids = [];
         const intervalFunction = async () => {
           const user = await User.findById(id);
+          if (user.matches.length != 0){
           const matches = user.matches.map((match) => match.userId);
           if (matches.length != last_matches_ids.length && matches.length != 0) {
             const new_matches = user.matches.filter(
@@ -71,7 +72,7 @@ io.on('connection', (socket) => {
             );
             socket.emit('matches', matched_users);
             last_matches_ids = matches;
-          }
+          }}
         };
         setInterval(intervalFunction, 1000);
       });
@@ -81,8 +82,9 @@ io.on('connection', (socket) => {
         let last_likes_ids = [];
         const intervalFunction = async () => {
           const user = await User.findById(id);
+          if (user.likesYou.length != 0) {
           const likesYou = user.likesYou.map((like) => like.userId);
-          if (likesYou.length != last_likes_ids.length  && likesYou.length != 0) {
+          if (likesYou.length != last_likes_ids.length  ) {
             const new_likes = user.likesYou.filter(
               (like) => !last_likes_ids.includes(like.userId)
             );
@@ -94,7 +96,7 @@ io.on('connection', (socket) => {
             );
             socket.emit('likeUsers', liked_users);
             last_likes_ids = likesYou;
-          }
+          }}
         };
         setInterval(intervalFunction, 1000);
       });
