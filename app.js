@@ -55,45 +55,50 @@ io.on('connection', (socket) => {
     
     socket.on('matches', async (request) => {
         const id = request.id;
-        console.log(id)
-        console.log("hola1")
         let last_matches_ids = [];
         const intervalFunction = async () => {
-        const user = await User.findById(id);
-        const matches = user.matches
-        if (matches.length != last_matches_ids.length) {
-        console.log("hola2")
-        const new_matches = matches.filter((match) => !last_matches_ids.includes(match));
-        const matched_users = await User.find({ _id: { $in: new_matches } });
-        socket.emit('matches', matched_users);
-        last_matches_ids = matches;
-        }
+          const user = await User.findById(id);
+          const matches = user.matches.map((match) => match.userId);
+          if (matches.length != last_matches_ids.length) {
+            const new_matches = user.matches.filter(
+              (match) => !last_matches_ids.includes(match.userId)
+            );
+            const matched_users = await Promise.all(
+              new_matches.map(async (match) => {
+                const user = await User.findById(match.userId);
+                return { ...user.toObject(), matchTime: match.time };
+              })
+            );
+            socket.emit('matches', matched_users);
+            last_matches_ids = matches;
+          }
         };
         setInterval(intervalFunction, 1000);
-       });
-       
-
-
-    
- socket.on('likeUsers', async (request) => {
-    const  id  = request.id;
-    console.log(id)
-    console.log("hola1")
-    let last_likes_ids = [];
-    const intervalFunction = async () => {
-      const user = await User.findById(id);
-      const likesYou = user.likesYou;
-      const matches = user.matches;
-      if (likesYou.length != last_likes_ids.length) {
-        console.log("hola2")
-        const new_likes = likesYou.filter((like) => !last_likes_ids.includes(like));
-        const liked_users = await User.find({ _id: { $in: new_likes, $nin: [...matches] } });
-        socket.emit('likeUsers', liked_users);
-        last_likes_ids = likesYou;
-      }
-    };
-    setInterval(intervalFunction, 1000);
-  });
+      });
+      
+      socket.on('likeUsers', async (request) => {
+        const id = request.id;
+        let last_likes_ids = [];
+        const intervalFunction = async () => {
+          const user = await User.findById(id);
+          const likesYou = user.likesYou.map((like) => like.userId);
+          if (likesYou.length != last_likes_ids.length) {
+            const new_likes = user.likesYou.filter(
+              (like) => !last_likes_ids.includes(like.userId)
+            );
+            const liked_users = await Promise.all(
+              new_likes.map(async (like) => {
+                const user = await User.findById(like.userId);
+                return { ...user.toObject(), likeTime: like.time };
+              })
+            );
+            socket.emit('likeUsers', liked_users);
+            last_likes_ids = likesYou;
+          }
+        };
+        setInterval(intervalFunction, 1000);
+      });
+      
 
 
  socket.on('posts', async (request) => {
@@ -255,18 +260,29 @@ app.put('/addLikeOrDislike/:id', async (req, res) => {
       const { id } = req.params;
       const { otherUserId, isLike } = req.body;
       let isMatch = false;
+      const currentTime = new Date();
       const update = isLike
-        ? { $push: { likes: otherUserId } }
+        ? {
+            $push: {
+              likes: { userId: otherUserId, time: currentTime }
+            }
+          }
         : { $push: { dislikes: otherUserId } };
       const updateLikes = await User.findByIdAndUpdate(id, update);
       if (isLike) {
-        await User.findByIdAndUpdate(otherUserId, { $push: { likesYou: id } });
+        await User.findByIdAndUpdate(otherUserId, {
+          $push: { likesYou: { userId: id, time: currentTime } }
+        });
         const otherUser = await User.findById(otherUserId);
-        if (otherUser.likes.includes(id)) {
+        if (otherUser.likes.some((like) => like.userId === id)) {
           isMatch = true;
           // Agregar el ID del usuario a la lista de matches de ambos usuarios
-          await User.findByIdAndUpdate(id, { $push: { matches: otherUserId } });
-          await User.findByIdAndUpdate(otherUserId, { $push: { matches: id } });
+          await User.findByIdAndUpdate(id, {
+            $push: { matches: { userId: otherUserId, time: currentTime } }
+          });
+          await User.findByIdAndUpdate(otherUserId, {
+            $push: { matches: { userId: id, time: currentTime } }
+          });
         }
       }
       res.json({
@@ -279,20 +295,25 @@ app.put('/addLikeOrDislike/:id', async (req, res) => {
     }
   });
   
-   
   
-   app.get('/getMyLikes/:id', async (req, res) => {
+   
+  app.get('/getMyLikes/:id', async (req, res) => {
     try {
-    const { id } = req.params;
-    const user = await User.findById(id);
-    const likes = user.likes;
-    const matches = user.matches;
-    const likedUsers = await User.find({ _id: { $in: likes, $nin: [...matches] }  });
-    res.json({ message: 'Consulta exitosa', likedUsers: likedUsers });
+      const { id } = req.params;
+      const user = await User.findById(id);
+      const likes = user.likes;
+      const likedUsers = await Promise.all(
+        likes.map(async (like) => {
+          const user = await User.findById(like.userId);
+          return { ...user.toObject(), likeTime: like.time };
+        })
+      );
+      res.json({ message: 'Consulta exitosa', likedUsers: likedUsers });
     } catch (err) {
-    res.status(500).json({ message: 'Error al consultar los usuarios' });
+      res.status(500).json({ message: 'Error al consultar los usuarios' });
     }
-   });
+  });
+  
    
 
 server.listen(process.env.PORT || 3000, () => {
