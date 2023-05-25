@@ -58,6 +58,7 @@ io.on('connection', (socket) => {
         let last_matches_ids = [];
         const intervalFunction = async () => {
           const user = await User.findById(id);
+          console.log(user.matches)
           if (user.matches.length != 0){
           const matches = user.matches.map((match) => match.userId);
           if (matches.length != last_matches_ids.length && matches.length != 0) {
@@ -82,6 +83,7 @@ io.on('connection', (socket) => {
         let last_likes_ids = [];
         const intervalFunction = async () => {
           const user = await User.findById(id);
+          console.log(user.likesYou)
           if (user.likesYou.length != 0) {
           const likesYou = user.likesYou.map((like) => like.userId);
           if (likesYou.length != last_likes_ids.length  ) {
